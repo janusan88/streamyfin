@@ -8,7 +8,7 @@ import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client
 import * as BackgroundTask from "expo-background-task";
 import * as Device from "expo-device";
 import { Image } from "expo-image";
-import { DarkTheme, ThemeProvider } from "expo-router/react-navigation";
+import { DefaultTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Platform } from "react-native";
 import { GlobalModal } from "@/components/GlobalModal";
 import { PendingAccountSaveModal } from "@/components/PendingAccountSaveModal";
@@ -76,6 +76,19 @@ import {
 } from "react-native-reanimated";
 import { Toaster } from "sonner-native";
 
+// 定义马卡龙浅色主题
+const MacaronTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: "#FFFDF9", // 乳白色背景
+    card: "#FFFFFF",
+    text: "#4A4A4A",       // 护眼深灰字
+    border: "#FFDAC1",     // 奶油黄边框点缀
+    primary: "#FFB7B2",    // 柔粉主色
+  },
+};
+
 // Disable strict mode warnings for reading shared values during render
 configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
@@ -96,26 +109,21 @@ if (!Platform.isTV) {
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
-// Set the animation options. This is optional.
+// Set the animation options.
 SplashScreen.setOptions({
   duration: 500,
   fade: true,
 });
 
-// Cap expo-image's in-memory cache. Default is unbounded (maxMemoryCost=0),
-// which on a 2GB Android TV box leads to ~200MB of decoded backdrops/posters
-// pinned in RAM after browsing. Caps are intentionally tighter on TV (which
-// has less RAM and runs alongside libmpv/MediaCodec) than on mobile.
-// Cost is measured in bytes of decoded bitmap (ARGB8888 = 4 bytes/pixel).
 try {
   Image.configureCache({
     maxMemoryCost: Platform.isTV
-      ? 8 * 1024 * 1024 // ~8 MB on TV
-      : 128 * 1024 * 1024, // ~128 MB on mobile
-    maxDiskSize: 200 * 1024 * 1024, // 200 MB disk cache on all platforms
+      ? 8 * 1024 * 1024
+      : 128 * 1024 * 1024,
+    maxDiskSize: 200 * 1024 * 1024,
   });
 } catch {
-  // configureCache is a no-op on some platforms/versions; safe to ignore.
+  // Safe to ignore
 }
 
 function useNotificationObserver() {
@@ -146,8 +154,6 @@ function useNotificationObserver() {
 
 if (!Platform.isTV) {
   TaskManager.defineTask(BACKGROUND_FETCH_TASK_SESSIONS, async () => {
-    console.log("TaskManager ~ sessions trigger");
-
     const api = store.get(apiAtom);
     if (api === null || api === undefined) return;
 
@@ -162,8 +168,6 @@ if (!Platform.isTV) {
   });
 
   TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
-    console.log("TaskManager ~ trigger");
-    // Background fetch task placeholder - currently unused
     return BackgroundTask.BackgroundTaskResult.Success;
   });
 }
@@ -177,43 +181,23 @@ const checkAndRequestPermissions = async () => {
     if (hasAskedBefore !== "true") {
       const { status } = await Notifications.requestPermissionsAsync();
       granted = status === "granted";
-      if (granted) {
-        writeToLog("INFO", "Notification permissions granted.");
-        console.log("Notification permissions granted.");
-      } else {
-        writeToLog("ERROR", "Notification permissions denied.");
-        console.log("Notification permissions denied.");
-      }
       storage.set("hasAskedForNotificationPermission", "true");
     } else {
-      // Already asked before, check current status
       const { status } = await Notifications.getPermissionsAsync();
       granted = status === "granted";
-      if (!granted) {
-        writeToLog(
-          "ERROR",
-          "Notification permissions denied (already asked before).",
-        );
-        console.log("Notification permissions denied (already asked before).");
-      }
     }
     return granted;
   } catch (error) {
-    writeToLog(
-      "ERROR",
-      "Error checking/requesting notification permissions:",
-      error,
-    );
-    console.error("Error checking/requesting notification permissions:", error);
     return false;
   }
 };
 
 export default function RootLayout() {
-  Appearance.setColorScheme("dark");
+  // 切换系统为 Light 模式
+  Appearance.setColorScheme("light");
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#FFFDF9" }}>
       <JotaiProvider store={jotaiStore}>
         <ActionSheetProvider>
           <I18nextProvider i18n={i18n}>
@@ -225,7 +209,6 @@ export default function RootLayout() {
   );
 }
 
-// Set up online manager for network-aware query behavior
 onlineManager.setEventListener((setOnline) => {
   return NetInfo.addEventListener((state) => {
     setOnline(!!state.isConnected);
@@ -235,24 +218,23 @@ onlineManager.setEventListener((setOnline) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 0, // Always stale - triggers background refetch on mount
-      gcTime: 1000 * 60 * 60 * 24, // 24 hours - keep in cache for offline
-      networkMode: "offlineFirst", // Return cache first, refetch if online
-      refetchOnMount: true, // Refetch when component mounts
-      refetchOnReconnect: true, // Refetch when network reconnects
-      refetchOnWindowFocus: false, // Not needed for mobile
+      staleTime: 0,
+      gcTime: 1000 * 60 * 60 * 24,
+      networkMode: "offlineFirst",
+      refetchOnMount: true,
+      refetchOnReconnect: true,
+      refetchOnWindowFocus: false,
       retry: (failureCount) => {
         if (!onlineManager.isOnline()) return false;
         return failureCount < 3;
       },
     },
     mutations: {
-      networkMode: "online", // Only run mutations when online
+      networkMode: "online",
     },
   },
 });
 
-// Create MMKV-based persister for offline support
 const mmkvPersister = createSyncStoragePersister({
   storage: {
     getItem: (key) => storage.getString(key) ?? null,
@@ -268,7 +250,6 @@ function Layout() {
   const _segments = useSegments();
   const router = useRouter();
 
-  // Enable TV menu key interception so React Native handles it instead of tvOS
   useEffect(() => {
     enableTVMenuKeyInterception();
   }, []);
@@ -305,40 +286,29 @@ function Layout() {
         name: "default",
       });
 
-      // Create dedicated channel for download notifications
       await Notifications?.setNotificationChannelAsync("downloads", {
         name: "Downloads",
         importance: Notifications.AndroidImportance.DEFAULT,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: "#FF231F7C",
+        lightColor: "#FFB7B2",
       });
     }
 
     const granted = await checkAndRequestPermissions();
-    if (!granted) {
-      console.log(
-        "Notification permissions not granted, skipping background fetch and push token registration.",
-      );
-      return;
-    }
+    if (!granted) return;
 
     if (!Platform.isTV && user && user.Policy?.IsAdministrator) {
       await registerBackgroundFetchAsyncSessions();
     }
 
-    // only create push token for real devices (pointless for emulators)
     if (Device.isDevice) {
       Notifications?.getExpoPushTokenAsync({
         projectId: "e79219d1-797f-4fbe-9fa1-cfd360690a68",
       })
         .then((token: ExpoPushToken) => {
-          if (token) {
-            console.log("Expo push token obtained:", token.data);
-            setExpoPushToken(token);
-          }
+          if (token) setExpoPushToken(token);
         })
         .catch((reason: any) => {
-          console.error("Failed to get push token:", reason);
           writeErrorLog("Failed to get Expo push token", reason);
         });
     }
@@ -351,11 +321,8 @@ function Layout() {
       notificationListener.current =
         Notifications?.addNotificationReceivedListener(
           (notification: Notification) => {
-            // Log only the title — serializing the whole notification touches
-            // the deprecated dataString getter (deprecation warning) and dumps
-            // noisy payloads into the console.
             console.log(
-              "Notification received while app running:",
+              "Notification received:",
               notification.request.content.title,
             );
           },
@@ -364,10 +331,7 @@ function Layout() {
       responseListener.current =
         Notifications?.addNotificationResponseReceivedListener(
           (response: NotificationResponse) => {
-            // Currently the notifications supported by the plugin will send data for deep links.
             const { title, data } = response.notification.request.content;
-            writeInfoLog(`Notification ${title} opened`, data);
-
             let url: any;
             const type = (data?.type ?? "").toString().toLowerCase();
             const itemId = data?.id;
@@ -377,11 +341,8 @@ function Layout() {
                 url = `/(auth)/(tabs)/home/items/page?id=${itemId}`;
                 break;
               case "episode":
-                // `/(auth)/(tabs)/${from}/items/page?id=${item.Id}`;
-                // We just clicked a notification for an individual episode.
                 if (itemId) {
                   url = `/(auth)/(tabs)/home/items/page?id=${itemId}`;
-                  // summarized season notification for multiple episodes. Bring them to series season
                 } else {
                   const seriesId = data?.seriesId;
                   const seasonIndex = data?.seasonIndex;
@@ -394,10 +355,7 @@ function Layout() {
                 break;
             }
 
-            writeInfoLog(`Notification attempting to redirect to ${url}`);
-            if (url) {
-              router.push(url);
-            }
+            if (url) router.push(url);
           },
         );
 
@@ -413,7 +371,7 @@ function Layout() {
       client={queryClient}
       persistOptions={{
         persister: mmkvPersister,
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours max cache age
+        maxAge: 1000 * 60 * 60 * 24,
         dehydrateOptions: {
           shouldDehydrateQuery: (query) => {
             return (
@@ -437,8 +395,10 @@ function Layout() {
                             <GlobalModalProvider>
                               <BottomSheetModalProvider>
                                 <IntroSheetProvider>
-                                  <ThemeProvider value={DarkTheme}>
-                                    <SystemBars style='light' hidden={false} />
+                                  {/* 使用马卡龙主题 */}
+                                  <ThemeProvider value={MacaronTheme}>
+                                    {/* 状态栏图标改为暗色，适应浅色背景 */}
+                                    <SystemBars style='dark' hidden={false} />
                                     <Stack initialRouteName='(auth)/(tabs)'>
                                       <Stack.Screen
                                         name='(auth)/(tabs)'
@@ -539,16 +499,19 @@ function Layout() {
                                         }}
                                       />
                                     </Stack>
+                                    {/* 软萌马卡龙风格 Toast 弹窗 */}
                                     <Toaster
                                       duration={4000}
                                       toastOptions={{
                                         style: {
-                                          backgroundColor: "#262626",
-                                          borderColor: "#363639",
-                                          borderWidth: 1,
+                                          backgroundColor: "#FFFFFF",
+                                          borderColor: "#FFDAC1",
+                                          borderWidth: 2,
+                                          borderRadius: 20,
                                         },
                                         titleStyle: {
-                                          color: "white",
+                                          color: "#4A4A4A",
+                                          fontWeight: "bold",
                                         },
                                       }}
                                       closeButton
