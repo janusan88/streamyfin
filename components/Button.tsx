@@ -27,24 +27,24 @@ const getColorClasses = (
     switch (color) {
       case "purple":
         return focused
-          ? "bg-transparent border-2 border-purple-400"
-          : "bg-transparent border-2 border-purple-600";
+          ? "bg-transparent border-2 border-[#FFB7B2]"
+          : "bg-transparent border-2 border-[#FFDAC1]";
       case "red":
         return focused
-          ? "bg-transparent border-2 border-red-400"
-          : "bg-transparent border-2 border-red-600";
+          ? "bg-transparent border-2 border-[#FF9AA2]"
+          : "bg-transparent border-2 border-[#FFB7B2]";
       case "black":
         return focused
           ? "bg-transparent border-2 border-neutral-700"
-          : "bg-transparent border-2 border-neutral-900";
+          : "bg-transparent border-2 border-neutral-800";
       case "white":
         return focused
-          ? "bg-transparent border-2 border-gray-100"
+          ? "bg-transparent border-2 border-gray-200"
           : "bg-transparent border-2 border-white";
       case "transparent":
         return focused
-          ? "bg-transparent border-2 border-gray-400"
-          : "bg-transparent border-2 border-gray-600";
+          ? "bg-transparent border-2 border-gray-300"
+          : "bg-transparent border-2 border-gray-400";
       default:
         return "";
     }
@@ -52,16 +52,16 @@ const getColorClasses = (
     switch (color) {
       case "purple":
         return focused
-          ? "bg-purple-500 border-2 border-white"
-          : "bg-purple-600 border border-purple-700";
+          ? "bg-[#FFB7B2] border-2 border-white"
+          : "bg-[#FFB7B2] border border-[#FFDAC1]";
       case "red":
-        return "bg-red-600";
+        return "bg-[#FF9AA2]";
       case "black":
-        return "bg-neutral-900";
+        return "bg-[#4A4A4A]";
       case "white":
         return focused
-          ? "bg-gray-100 border-2 border-gray-300"
-          : "bg-white border border-gray-200";
+          ? "bg-[#FFF1C5] border-2 border-[#FFDAC1]"
+          : "bg-white border border-[#FFDAC1]";
       case "transparent":
         return "bg-transparent";
       default:
@@ -115,7 +115,11 @@ export const Button: React.FC<PropsWithChildren<ButtonProps>> = ({
   const lightHapticFeedback = useHaptic("light");
 
   const textColorClass =
-    color === "white" && variant === "solid" ? "text-black" : "text-white";
+    color === "white" && variant === "solid"
+      ? "text-[#4A4A4A]"
+      : color === "purple" && variant === "solid"
+      ? "text-white"
+      : "text-[#4A4A4A]";
 
   return Platform.isTV ? (
     <Pressable
@@ -133,16 +137,16 @@ export const Button: React.FC<PropsWithChildren<ButtonProps>> = ({
       <Animated.View
         style={{
           transform: [{ scale }],
-          shadowColor: "#ffffff",
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: focused ? 0.5 : 0,
-          shadowRadius: focused ? scaleSize(10) : 0,
-          elevation: focused ? 12 : 0, // Android glow
+          shadowColor: "#FFB7B2",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: focused ? 0.4 : 0,
+          shadowRadius: focused ? scaleSize(12) : 0,
+          elevation: focused ? 12 : 0,
         }}
       >
         <View
           style={{
-            borderRadius: scaleSize(16),
+            borderRadius: scaleSize(24),
             paddingVertical: scaleSize(14),
             alignItems: "center",
             justifyContent: "center",
@@ -164,11 +168,18 @@ export const Button: React.FC<PropsWithChildren<ButtonProps>> = ({
   ) : (
     <TouchableOpacity
       className={`
-        p-3 rounded-xl items-center justify-center
+        px-5 py-3 rounded-full items-center justify-center
         ${(loading || disabled) && "opacity-50"}
         ${colorClasses}
         ${className}
       `}
+      style={{
+        shadowColor: "#FFB7B2",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 2,
+      }}
       onPress={() => {
         if (!loading && !disabled && onPress) {
           onPress();
@@ -185,22 +196,22 @@ export const Button: React.FC<PropsWithChildren<ButtonProps>> = ({
       ) : (
         <View
           className={`
-            flex flex-row items-center justify-between w-full
+            flex flex-row items-center w-full
             ${justify === "between" ? "justify-between" : "justify-center"}`}
         >
-          {iconLeft ? iconLeft : <View className='w-4' />}
+          {iconLeft ? iconLeft : <View className='w-2' />}
           <Text
             className={`
-          ${textColorClass} font-bold text-base
-          ${disabled ? "text-gray-300" : ""}
-          ${textClassName}
-          ${iconRight ? "mr-2" : ""}
-          ${iconLeft ? "ml-2" : ""}
-        `}
+              ${textColorClass} font-bold text-base tracking-wide
+              ${disabled ? "text-gray-300" : ""}
+              ${textClassName}
+              ${iconRight ? "mr-2" : ""}
+              ${iconLeft ? "ml-2" : ""}
+            `}
           >
             {children}
           </Text>
-          {iconRight ? iconRight : <View className='w-4' />}
+          {iconRight ? iconRight : <View className='w-2' />}
         </View>
       )}
     </TouchableOpacity>
