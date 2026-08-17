@@ -38,7 +38,6 @@ const rubberBand = (distance: number, scale: number = 8): number => {
   "worklet";
   const absDistance = Math.abs(distance);
   const sign = distance < 0 ? -1 : 1;
-  // Logarithmic: keeps growing but slower and slower
   return sign * scale * Math.log(1 + absDistance / scale);
 };
 
@@ -69,11 +68,6 @@ export const MiniPlayerBar: React.FC = () => {
     return `${api.basePath}/Items/${currentTrack.Id}/Images/Primary?maxHeight=100&maxWidth=100`;
   }, [api, currentTrack]);
 
-  const _progressPercentage = useMemo(() => {
-    if (!duration || duration === 0) return 0;
-    return (progress / duration) * 100;
-  }, [progress, duration]);
-
   const handlePress = useCallback(() => {
     router.push("/(auth)/now-playing");
   }, [router]);
@@ -102,16 +96,13 @@ export const MiniPlayerBar: React.FC = () => {
   const panGesture = Gesture.Pan()
     .activeOffsetY([-15, 15])
     .onUpdate((event) => {
-      // Logarithmic slowdown - keeps moving but progressively slower
       translateY.value = rubberBand(event.translationY, 6);
     })
     .onEnd((event) => {
       const velocity = event.velocityY;
       const currentPosition = translateY.value;
 
-      // Swipe up - open modal (check position OR velocity)
       if (currentPosition < -16 || velocity < -VELOCITY_THRESHOLD) {
-        // Slow return animation - won't jank with navigation
         translateY.value = withTiming(0, {
           duration: 600,
           easing: Easing.out(Easing.cubic),
@@ -119,26 +110,21 @@ export const MiniPlayerBar: React.FC = () => {
         runOnJS(handlePress)();
         return;
       }
-      // Swipe down - stop playback and dismiss (check position OR velocity)
       if (currentPosition > 16 || velocity > VELOCITY_THRESHOLD) {
-        // No need to reset - component will unmount
         runOnJS(handleDismiss)();
         return;
       }
 
-      // Only animate back if no action was triggered
       translateY.value = withTiming(0, {
         duration: 200,
         easing: Easing.out(Easing.cubic),
       });
     });
 
-  // Animated styles for the container
   const animatedContainerStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
   }));
 
-  // Animated styles for the inner bar
   const animatedBarStyle = useAnimatedStyle(() => ({
     height: interpolate(
       translateY.value,
@@ -175,7 +161,7 @@ export const MiniPlayerBar: React.FC = () => {
             />
           ) : (
             <View style={styles.albumPlaceholder}>
-              <Ionicons name='musical-note' size={20} color='#888' />
+              <Ionicons name='musical-note' size={18} color='#FFB7B2' />
             </View>
           )}
         </View>
@@ -194,7 +180,7 @@ export const MiniPlayerBar: React.FC = () => {
       {/* Controls */}
       <View style={styles.controls}>
         {isLoading ? (
-          <ActivityIndicator size='small' color='white' style={styles.loader} />
+          <ActivityIndicator size='small' color='#FFB7B2' style={styles.loader} />
         ) : (
           <>
             <TouchableOpacity
@@ -204,8 +190,8 @@ export const MiniPlayerBar: React.FC = () => {
             >
               <Ionicons
                 name={isPlaying ? "pause" : "play"}
-                size={26}
-                color='white'
+                size={22}
+                color='#4A4A4A'
               />
             </TouchableOpacity>
             <TouchableOpacity
@@ -213,18 +199,11 @@ export const MiniPlayerBar: React.FC = () => {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={styles.controlButton}
             >
-              <Ionicons name='play-forward' size={22} color='white' />
+              <Ionicons name='play-forward' size={20} color='#4A4A4A' />
             </TouchableOpacity>
           </>
         )}
       </View>
-
-      {/* Progress bar at bottom */}
-      {/* <View style={styles.progressContainer}>
-        <View
-          style={[styles.progressFill, { width: `${progressPercentage}%` }]}
-        />
-      </View> */}
     </>
   );
 
@@ -237,7 +216,7 @@ export const MiniPlayerBar: React.FC = () => {
             bottom:
               BOTTOM_TAB_HEIGHT +
               insets.bottom +
-              (Platform.OS === "android" ? 32 : 4),
+              (Platform.OS === "android" ? 24 : 8),
           },
           animatedContainerStyle,
         ]}
@@ -250,8 +229,9 @@ export const MiniPlayerBar: React.FC = () => {
                   flex: 1,
                   flexDirection: "row",
                   alignItems: "center",
-                  paddingRight: 10,
-                  paddingLeft: 20,
+                  paddingRight: 12,
+                  paddingLeft: 12,
+                  backgroundColor: "rgba(255, 255, 255, 0.85)",
                 }}
               >
                 {content}
@@ -271,15 +251,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: HORIZONTAL_MARGIN,
     right: HORIZONTAL_MARGIN,
-    shadowColor: "#000",
+    shadowColor: "#FFB7B2",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 5,
   },
   touchable: {
-    borderRadius: 50,
+    borderRadius: 25,
     overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#FFDAC1",
   },
   blurContainer: {
     flex: 1,
@@ -288,12 +270,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: "rgba(28, 28, 30, 0.97)",
-    borderRadius: 14,
-    borderWidth: 0.5,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 25,
   },
   tappableArea: {
     flex: 1,
@@ -301,11 +281,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   albumArt: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
     overflow: "hidden",
-    backgroundColor: "#333",
+    backgroundColor: "#FFF1C5",
   },
   albumImage: {
     width: "100%",
@@ -315,45 +295,33 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#2a2a2a",
+    backgroundColor: "#FFF1C5",
   },
   trackInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 10,
     marginRight: 8,
     justifyContent: "center",
   },
   trackTitle: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
+    color: "#4A4A4A",
+    fontSize: 13,
+    fontWeight: "700",
   },
   artistName: {
-    color: "rgba(255, 255, 255, 0.6)",
-    fontSize: 12,
+    color: "#8A7A7A",
+    fontSize: 11,
+    marginTop: 1,
   },
   controls: {
     flexDirection: "row",
     alignItems: "center",
   },
   controlButton: {
-    padding: 8,
+    padding: 6,
+    marginLeft: 4,
   },
   loader: {
-    marginHorizontal: 16,
-  },
-  progressContainer: {
-    position: "absolute",
-    bottom: 0,
-    left: 10,
-    right: 10,
-    height: 3,
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: 1.5,
-  },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "white",
-    borderRadius: 1.5,
+    marginHorizontal: 12,
   },
 });
