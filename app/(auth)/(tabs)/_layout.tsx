@@ -14,7 +14,6 @@ import { Platform, View } from "react-native";
 import { SystemBars } from "react-native-edge-to-edge";
 import type { TVNavBarTab } from "@/components/tv/TVNavBar";
 import { TVNavBar } from "@/components/tv/TVNavBar";
-import { Colors } from "@/constants/Colors";
 import useRouter from "@/hooks/useAppRouter";
 import {
   isTabRoute,
@@ -110,8 +109,8 @@ function TVTabLayout() {
   }, [visibleKeys, activeTabKey, router]);
 
   return (
-    <View style={{ flex: 1 }}>
-      <SystemBars hidden={false} style='light' />
+    <View style={{ flex: 1, backgroundColor: "#FFFDF9" }}>
+      <SystemBars hidden={false} style='dark' />
       <Stack
         screenOptions={{ headerShown: false, animation: "none" }}
         initialRouteName='(home)'
@@ -146,15 +145,15 @@ export default function TabLayout() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
-      <SystemBars hidden={false} style='light' />
+    <View style={{ flex: 1, backgroundColor: "#FFFDF9" }}>
+      <SystemBars hidden={false} style='dark' />
       <NativeTabs
         sidebarAdaptable={false}
         tabBarStyle={{
-          backgroundColor: "#121212",
+          backgroundColor: "#FFFFFF",
         }}
-        tabBarActiveTintColor={Platform.isTV ? "#FFFFFF" : Colors.primary}
-        activeIndicatorColor={"#392c3b"}
+        tabBarActiveTintColor={Platform.isTV ? "#4A4A4A" : "#FFB7B2"}
+        activeIndicatorColor={"#FFE5EC"}
         scrollEdgeAppearance='default'
       >
         <NativeTabs.Screen redirect name='index' />
